@@ -4,6 +4,11 @@
 
 # <UDF name="API_TOKEN_PASSWORD" Label="Linode API Password" example="This token is used to add additional IP's and configure the next instance. " />
 
+## WHEN TESTING LOCALLY##
+# It's easiest to declare your API token. So let's just do that here..
+
+export API_TOKEN_PASSWORD=$
+
 # install packages
 apt-get update 
 apt-get install -y ansible git python3 python3-pip jq
@@ -44,7 +49,10 @@ echo "$API_TOKEN_PASSWORD" > /tmp/installation/API_TOKEN_PASSWORD
 echo "$SUBNODE_PASSWORD" > /tmp/installation/SUBNODE_PASSWORD
 echo "$TYPE" > /tmp/installation/TYPE
 
-# Define a mapping between regions (DCs) and IDs
+# Define a mapping between regions (DCs) and IDs 
+
+################THIS NEEDS ADDED TO###################
+
 declare -A DCID_MAPPING
 DCID_MAPPING["us-ord"]=18
 DCID_MAPPING["us-lax"]=30
@@ -60,16 +68,12 @@ fi
 # echos the DCIC to a file 
 echo "$DCID" > /tmp/installation/DCID
 
-#Clones the playbooks down to the system 
-# git clone https://github.com/WoodardDigital/ansible-failover.git
-# cd ansible-failover/Ansible 
-
 # Generates a random password. This will need some modiciation, but it should work for now. 
 export SUBPASS=$(LC_ALL=C tr -dc '[:graph:]' </dev/urandom | head -c 32; echo)
 echo $SUBPASS > /tmp/installation/SUBPASS
 
 # Creates a new Linode in the same DC
-response=$(curl -H "Content-Type: application/json" \
+curl -H "Content-Type: application/json" \
 -H "Authorization: Bearer $API_TOKEN_PASSWORD" \
 -X POST -d '{
     "authorized_users": [
@@ -86,10 +90,15 @@ response=$(curl -H "Content-Type: application/json" \
         "Failover"
     ],
     "type": "'"$TYPE"'"
-}' https://api.linode.com/v4/linode/instances)
+}' https://api.linode.com/v4/linode/instances > /tmp/installation/SUBINSTANCE
 
 # Use jq to extract the IP address from the response
-SUBIP=$(echo "$response" | jq -r '.ipv4[0]')
+SUBIP=$(cat /tmp/installation/SUBINSTANCE | jq -r '.ipv4[0]')
 
 # Print the extracted IP address
 echo $SUBIP > /tmp/installation/SUBIP
+
+
+#Clones the playbooks down to the system 
+# git clone https://github.com/WoodardDigital/ansible-failover.git
+# cd ansible-failover/Ansible 
